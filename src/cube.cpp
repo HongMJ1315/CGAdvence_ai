@@ -8,6 +8,7 @@ float points[][3] = { {-0.5, -0.5, -0.5}, {0.5, -0.5, -0.5}, {0.5, 0.5, -0.5}, {
 int faces[][4] = { {0, 3, 2, 1}, {0, 1, 5, 4}, {1, 2, 6, 5}, {4, 5, 6, 7}, {2, 3, 7, 6}, {0, 4, 7, 3} };
 
 cube::cube(glm::vec3 loc, float l, float w, float h) :object(loc){
+    std::cout << loc.x << " " << loc.y << " " << loc.z << std::endl;
     this->l = l;
     this->w = w;
     this->h = h;

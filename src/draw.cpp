@@ -4,7 +4,7 @@
 #include "maze.h"
 #include "player.h"
 #define BOX_SIZE 11
-#define REWARD 20
+#define REWARD 10
 
 int keyState[GLFW_KEY_LAST] = { 0 };
 int directionKey[4] = { 0 };
@@ -17,9 +17,9 @@ int viewMode = 0;
 std::vector<player> players;
 std::vector<object *> floors;
 std::vector<object *> walls;
-std::vector<std::pair<ellipsoid,bool*> > rewards;
+std::vector<std::pair<ellipsoid, bool *> > rewards;
 bool showObject = true;
-bool graph[MAZE_SIZE][MAZE_SIZE] = {};
+int graph[MAZE_SIZE][MAZE_SIZE] = {};
 bool reward[MAZE_SIZE][MAZE_SIZE] = {};
 
 
@@ -53,8 +53,8 @@ void setLight(){
     glEnable(SUN_LIGHT);
     GLfloat light_position[] = { 0.0, -1.0, 0.0, 0.0 };
     GLfloat light_ambient[] = { 0.5, 0.5, 0.5, 1.0 };
-    GLfloat light_diffuse[] = { 0.5, 0.5, 0.5, 1.0 };     
-    GLfloat light_specular[] = { 0.5, 0.5, 0.5, 1.0 };    
+    GLfloat light_diffuse[] = { 0.5, 0.5, 0.5, 1.0 };
+    GLfloat light_specular[] = { 0.5, 0.5, 0.5, 1.0 };
     glLightfv(SUN_LIGHT, GL_POSITION, light_position);
     glLightfv(SUN_LIGHT, GL_AMBIENT, light_ambient);
     glLightfv(SUN_LIGHT, GL_DIFFUSE, light_diffuse);
@@ -78,27 +78,56 @@ void initObjects(int num){
             rewards.back().first.setMaterial(M_OCEAN);
             rewards.back().first.setName("Reward");
             rewards.back().first.setColor(glm::vec3(0, 1, 1));
+            rewards.back().first.setRotateV(glm::vec3(0, 20, 0));
         }
         else i--;
     }
-    int trans = 0;
+    float transX = 0, transY = -0;
     for(int i = 0; i < MAZE_SIZE; i++){
         for(int j = 0; j < MAZE_SIZE; j++){
-            floors.push_back(new cube(glm::vec3(i + trans, 0, j + trans), 1, 1, 1));
+            floors.push_back(new cube(glm::vec3(i + transX, 0, j + transY), 1, 1, 1));
             floors.back()->setTexture(TEXTURE::T_FLOOR, textName);
             floors.back()->setMaterial(M_OCEAN);
             floors.back()->setName("Floor");
             if(!graph[i][j]){
-                walls.push_back(new cube(glm::vec3(i + trans, 1, j + trans), 1, 1, 1));
+                walls.push_back(new cube(glm::vec3(i + transX, 1, j + transY), 1, 1, 1));
                 walls.back()->setTexture(TEXTURE::T_WALL, textName);
                 walls.back()->setName("Wall");
                 walls.back()->setMaterial(M_OCEAN);
             }
         }
     }
-    players.push_back(player(glm::vec3(MAZE_SIZE / 2, 1, MAZE_SIZE / 2), 1));
-    // players.push_back(player(glm::vec3(MAZE_SIZE / 2, 1, MAZE_SIZE / 2), 1));
-    
+    players.push_back(player(glm::vec3(MAZE_SIZE / 2 + 1, 1, MAZE_SIZE / 2 + 1), 1));
+    players.back().setName("Red");
+    players.push_back(player(glm::vec3(MAZE_SIZE / 2 - 1, 1, MAZE_SIZE / 2 + 1), 1));
+    players.back().setName("Red");
+    players.push_back(player(glm::vec3(MAZE_SIZE / 2 + 1, 1, MAZE_SIZE / 2 - 1), 1));
+    players.back().setName("Red");
+    players.push_back(player(glm::vec3(MAZE_SIZE / 2 - 1, 1, MAZE_SIZE / 2 - 1), 1));
+    players.back().setName("Red");
+    players.push_back(player(glm::vec3(1, 1, 1), 2));
+    players.back().setName("Blue");
+    players.push_back(player(glm::vec3(1, 1, MAZE_SIZE - 2), 2));
+    players.back().setName("Blue");
+    players.push_back(player(glm::vec3(MAZE_SIZE - 2, 1, MAZE_SIZE - 2), 2));
+    players.back().setName("Blue");
+    players.push_back(player(glm::vec3(MAZE_SIZE - 2, 1, 1), 2));
+    players.back().setName("Blue");
+    for(int i = 0; i < 4; i++){
+        // 在1-10或 20-30之間生成綠球
+        int x, y;
+        do{
+            x = rand() % 5 + 1;
+            y = rand() % 5 + 1;
+            int t = rand() % 2;
+            if(i % 2 == 0){
+                x += 20;
+                y += 20;
+            }
+        }while(graph[x][y] == 0);
+        players.push_back(player(glm::vec3(x, 1, y), 3));
+        players.back().setName("Green");
+    }
 }
 
 void move(float dx, float dy, float dz, glm::vec3 &frontPos, glm::vec3 &cameraPos){
@@ -192,7 +221,7 @@ void drawCoordinateString(glm::vec3 cameraPos, glm::vec3 frontPos, int width, in
     glMatrixMode(GL_MODELVIEW);
 }
 
-void drawSingleView( int width, int height, glm::vec3 &cameraPos, glm::vec3 &frontPos){
+void drawSingleView(int width, int height, glm::vec3 &cameraPos, glm::vec3 &frontPos){
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glViewport(0, 0, width, height);
@@ -293,7 +322,37 @@ void keyboard(GLFWwindow *window, int key, int scancode, int action, int mods){
 }
 
 void updatePhysics(float dt, float t){
-    for(auto &p: players){
-        p.motion(graph, walls);
+    int cntReward = 0;
+    for(auto &r : rewards){
+        if(*r.second){
+            cntReward++;
+        }
+    }
+    if(cntReward == 0){
+        std::cout << "Win!" << std::endl;
+        exit(0);
+    }
+    int cntAlive = 0;
+    for(auto &p : players){
+        if(p.isAlive && p.getType() != 1){
+            cntAlive++;
+        }
+    }
+    if(cntAlive == 0){
+        std::cout << "Lose!" << std::endl;
+        exit(0);
+    }
+    for(auto &p : players){
+        p.motion(graph, reward, walls, players, rewards);
+    }
+    // for(int i = 0; i < MAZE_SIZE; i++){
+    //     for(int j = 0; j < MAZE_SIZE; j++){
+    //         std::cout << graph[i][j] << " ";
+    //     }
+    // }
+    for(auto &r : rewards){
+        if(*r.second){
+            r.first.update(dt);
+        }
     }
 }

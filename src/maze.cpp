@@ -3,8 +3,7 @@
 #include <ctime>
 
 // 0: wall, 1: path
-void generateMaze(bool graph[MAZE_SIZE][MAZE_SIZE], int maze_size) {
-    std::srand(std::time(nullptr));
+void generateMaze(int graph[MAZE_SIZE][MAZE_SIZE], int maze_size) {
     // Initialize all cells as walls
     for (int i = 0; i < maze_size; ++i) {
         for (int j = 0; j < maze_size; ++j) {
@@ -35,7 +34,7 @@ void generateMaze(bool graph[MAZE_SIZE][MAZE_SIZE], int maze_size) {
     }
 }
 
-void dfs(bool graph[MAZE_SIZE][MAZE_SIZE], int x, int y, int maze_size) {
+void dfs(int graph[MAZE_SIZE][MAZE_SIZE], int x, int y, int maze_size) {
     static const int DX[] = { 0, 1, 0, -1 };
     static const int DY[] = { 1, 0, -1, 0 };
     std::vector<int> directions = { 0, 1, 2, 3 };
